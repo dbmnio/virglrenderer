@@ -312,7 +312,7 @@ endif
 if with_cgl
    cgl_dep = dependency('appleframeworks', modules: 'OpenGL')
    have_cgl = cgl_dep.found()
-   conf_data.set('HAVE_CGL_H', have_cgl)
+   conf_data.set('HAVE_CGL_H', have_cgl ? 1 : 0)
 endif
 
 have_vla = not cc.has_header_symbol('stdlib.h', '__STDC_NO_VLA__')
@@ -435,6 +435,7 @@ summary({'prefix': get_option('prefix'),
 summary({'c_args': (' ').join(get_option('c_args')),
         'egl': have_egl,
         'glx': have_glx,
+        'cgl': have_cgl,
         'gbm': gbm_dep.found(),
         'minigbm_alloc': with_minigbm_allocation,
         'venus': with_venus,
