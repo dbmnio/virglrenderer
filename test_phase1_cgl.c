@@ -12,6 +12,9 @@
 
 #include "src/virglrenderer.h"
 
+// Dummy cookie for callbacks
+static int test_cookie = 42;
+
 // Minimal callbacks - we don't need full functionality for this test
 static void test_write_fence(void *cookie, uint32_t fence) {
     (void)cookie;
@@ -38,7 +41,7 @@ int main(int argc, char **argv) {
     
     printf("=== Phase 1 CGL Backend Test ===\n");
     
-    // Set up minimal callbacks
+    // Set up minimal callbacks with proper version
     struct virgl_renderer_callbacks cbs = {
         .version = VIRGL_RENDERER_CALLBACKS_VERSION,
         .write_fence = test_write_fence,
@@ -49,8 +52,8 @@ int main(int argc, char **argv) {
     
     printf("1. Testing CGL backend initialization...\n");
     
-    // Test CGL backend initialization
-    int ret = virgl_renderer_init(NULL, VIRGL_RENDERER_USE_CGL, &cbs);
+    // Test CGL backend initialization with valid cookie
+    int ret = virgl_renderer_init(&test_cookie, VIRGL_RENDERER_USE_CGL, &cbs);
     if (ret != 0) {
         printf("❌ FAILED: virgl_renderer_init returned %d\n", ret);
         return 1;

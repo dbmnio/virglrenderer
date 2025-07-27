@@ -844,7 +844,7 @@ int virgl_renderer_init(void *cookie, int flags, struct virgl_renderer_callbacks
    }
 
    if (!state.winsys_initialized && !(flags & VIRGL_RENDERER_NO_VIRGL) &&
-       (flags & (VIRGL_RENDERER_USE_EGL | VIRGL_RENDERER_USE_GLX))) {
+       (flags & (VIRGL_RENDERER_USE_EGL | VIRGL_RENDERER_USE_GLX | VIRGL_RENDERER_USE_CGL))) {
       int drm_fd = -1;
 
       if (flags & VIRGL_RENDERER_USE_EGL) {
