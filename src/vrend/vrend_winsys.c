@@ -35,6 +35,7 @@ enum {
    CONTEXT_NONE,
    CONTEXT_EGL,
    CONTEXT_GLX,
+   CONTEXT_CGL,
    CONTEXT_EGL_EXTERNAL
 };
 
@@ -50,6 +51,10 @@ struct virgl_gbm *gbm = NULL;
 
 #ifdef HAVE_EPOXY_GLX_H
 static struct virgl_glx *glx_info = NULL;
+#endif
+
+#ifdef HAVE_CGL_H
+static struct virgl_cgl *cgl_info = NULL;
 #endif
 
 int vrend_winsys_init(uint32_t flags, int preferred_fd)
@@ -89,6 +94,16 @@ int vrend_winsys_init(uint32_t flags, int preferred_fd)
       use_context = CONTEXT_GLX;
 #else
       virgl_error("GLX is not supported on this platform\n");
+      return -1;
+#endif
+   } else if (flags & VIRGL_RENDERER_USE_CGL) {
+#ifdef HAVE_CGL_H
+      cgl_info = virgl_cgl_init();
+      if (!cgl_info)
+         return -1;
+      use_context = CONTEXT_CGL;
+#else
+      virgl_error("CGL is not supported on this platform\n");
       return -1;
 #endif
    }

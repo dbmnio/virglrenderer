@@ -260,13 +260,16 @@ platforms = get_option('platforms')
 
 require_egl = platforms.contains('egl')
 require_glx = platforms.contains('glx')
+require_cgl = platforms.contains('cgl')
 auto_egl_glx = platforms.contains('auto')
 
 with_egl = require_egl or auto_egl_glx
 with_glx = require_glx or auto_egl_glx
+with_cgl = require_cgl or auto_egl_glx
 
 have_egl = false
 have_glx = false
+have_cgl = false
 
 with_minigbm_allocation = get_option('minigbm_allocation')
 if with_minigbm_allocation
@@ -304,6 +307,12 @@ if with_glx
       assert(not require_glx,
              'glx was explicitely requested but it is not supported by epoxy')
    endif
+endif
+
+if with_cgl
+   cgl_dep = dependency('appleframeworks', modules: 'OpenGL')
+   have_cgl = cgl_dep.found()
+   conf_data.set('HAVE_CGL_H', have_cgl)
 endif
 
 have_vla = not cc.has_header_symbol('stdlib.h', '__STDC_NO_VLA__')

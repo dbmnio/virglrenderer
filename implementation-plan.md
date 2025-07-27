@@ -10,13 +10,13 @@ The goal is to create a new platform-specific implementation of `vrend_winsys.c`
 
 **Implementation Steps:**
 
-1.  **File Creation:** Create a new file: `src/vrend/vrend_winsys_cgl.c`.
-2.  **Build System Integration:**
+1.  **File Creation:** ✅ Create a new file: `src/vrend/vrend_winsys_cgl.c`.
+2.  **Build System Integration:** ✅
     *   Modify `src/vrend/meson.build`.
     *   Add a conditional block to check if the host system is 'darwin' (macOS).
     *   Inside this block, add `vrend_winsys_cgl.c` to the list of sources for the `virglrenderer` library.
     *   Also in this block, add a dependency on the `OpenGL.framework` for linking.
-3.  **Initial CGL Implementation (`vrend_winsys_cgl.c`):**
+3.  **Initial CGL Implementation (`vrend_winsys_cgl.c`):** ✅
     *   Implement the initial `vrend_winsys_init_cgl` function. This function will be responsible for populating the `vrend_winsys_vtable` with our CGL-specific function pointers.
     *   Implement a private `cgl_init` function that is called by `vrend_winsys_init_cgl`. This function will perform the one-time setup:
         *   Define `CGLPixelFormatAttribute` array to request an OpenGL 3.3+ Core Profile. This is crucial for modern OpenGL support.
@@ -26,7 +26,7 @@ The goal is to create a new platform-specific implementation of `vrend_winsys.c`
 
 **Testing Strategy:**
 
-*   **Standalone Test:** Create a minimal test program (`/tests/test_virgl_cgl.c`). This program will not be part of the final product but is essential for this phase.
+*   **Standalone Test:** ✅ Create a minimal test program (`/tests/test_virgl_cgl.c`). This program will not be part of the final product but is essential for this phase.
 *   **Test Logic:**
     1.  The test will link against `virglrenderer`.
     2.  It will call `vrend_renderer_init(NULL)`, which should trigger our new CGL initialization path on macOS.

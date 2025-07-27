@@ -73,6 +73,10 @@
 #include "vrend_video.h"
 #endif
 
+#ifdef HAVE_CGL_H
+//extern const struct vrend_winsys_vtable vrend_winsys_cgl_vtable;
+#endif
+
 #ifdef WIN32
 #include <dxgi1_2.h>
 #endif

@@ -56,6 +56,10 @@ vrend_winsys_egl_sources = [
    'vrend/vrend_winsys_egl.c',
 ]
 
+vrend_winsys_cgl_sources = [
+   'vrend/vrend_winsys_cgl.c'
+]
+
 vrend_winsys_glx_sources = [
    'vrend/vrend_winsys_glx.c',
 ]
@@ -139,6 +143,10 @@ virgl_depends = [
    m_dep,
 ]
 
+if with_cgl
+  virgl_depends += dependency('appleframeworks', modules: 'OpenGL')
+endif
+
 if with_tracing == 'perfetto'
    virgl_depends += [vperfetto_min_dep]
 endif
@@ -160,6 +168,10 @@ endif
 
 if have_egl
    virgl_sources += vrend_winsys_egl_sources
+endif
+
+if have_cgl
+   virgl_sources += vrend_winsys_cgl_sources
 endif
 
 if have_glx
