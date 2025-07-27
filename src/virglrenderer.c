@@ -843,6 +843,13 @@ int virgl_renderer_init(void *cookie, int flags, struct virgl_renderer_callbacks
       state.context_initialized = true;
    }
 
+   /* Automatically enable CGL on macOS if no other window system is specified */
+#ifdef __APPLE__
+   if (!(flags & (VIRGL_RENDERER_USE_EGL | VIRGL_RENDERER_USE_GLX | VIRGL_RENDERER_USE_CGL))) {
+      flags |= VIRGL_RENDERER_USE_CGL;
+   }
+#endif
+
    if (!state.winsys_initialized && !(flags & VIRGL_RENDERER_NO_VIRGL) &&
        (flags & (VIRGL_RENDERER_USE_EGL | VIRGL_RENDERER_USE_GLX | VIRGL_RENDERER_USE_CGL))) {
       int drm_fd = -1;
@@ -914,6 +921,8 @@ int virgl_renderer_init(void *cookie, int flags, struct virgl_renderer_callbacks
          renderer_flags |= VREND_USE_COMPAT_CONTEXT;
       if (flags & VIRGL_RENDERER_USE_GLES)
          renderer_flags |= VREND_USE_GLES;
+      if (flags & VIRGL_RENDERER_USE_CGL)
+         renderer_flags |= VREND_USE_CGL;
 
       ret = vrend_renderer_init(&vrend_cbs, renderer_flags);
       if (ret) {

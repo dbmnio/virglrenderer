@@ -44,18 +44,20 @@ This phase lays the groundwork by creating the necessary files and data structur
 
 This phase involves integrating the new CGL backend into the main window system selection and initialization logic of `virglrenderer`.
 
-*   **Task 2.1: Update Window System Enum**
-    *   **Subtask 2.1.1:** In `src/vrend/vrend_winsys.h`, extend the `virgl_ws_type` enum with a new entry for the CoreGL backend: `VIRGL_WINSYS_CGL`.
+*   **Task 2.1: Update Window System Enum** ✅
+    *   **Subtask 2.1.1:** ✅ The implementation uses simple integer constants (`CONTEXT_CGL`) instead of a dedicated enum, which are already implemented in `vrend_winsys.c`.
 
-*   **Task 2.2: Update Winsys Initialization Logic**
-    *   **Subtask 2.2.1:** In `src/vrend/vrend_winsys.c`, include the new `vrend_winsys_cgl.h` header, guarded by `#ifdef __APPLE__`.
-    *   **Subtask 2.2.2:** In the `vrend_winsys_init()` function within `src/vrend/vrend_winsys.c`, add a new `case VIRGL_WINSYS_CGL:` to the `switch` statement. This case will assign the address of the `vrend_cgl_ops` struct to the global `vrend_winsys_ops` pointer. This logic must also be guarded by `#ifdef __APPLE__`.
+*   **Task 2.2: Update Winsys Initialization Logic** ✅
+    *   **Subtask 2.2.1:** ✅ CGL header inclusion is already implemented in `src/vrend/vrend_winsys.c`, guarded by `#ifdef HAVE_CGL_H`.
+    *   **Subtask 2.2.2:** ✅ CGL initialization logic is already implemented in `vrend_winsys_init()` with proper `VIRGL_RENDERER_USE_CGL` flag handling.
 
-*   **Task 2.3: Update Renderer Initialization to Select CGL**
-    *   **Subtask 2.3.1:** In `src/virglrenderer.h`, add a new flag `VIRGL_RENDERER_USE_CGL` to the `virgl_renderer_flags` enum.
-    *   **Subtask 2.3.2:** In `src/vrend/vrend_renderer.h`, add a corresponding `VREND_FLAG_USE_CGL` to the `vrend_flags` enum.
-    *   **Subtask 2.3.3:** In `src/virglrenderer.c`, modify `virgl_renderer_init()` to automatically enable the `VIRGL_RENDERER_USE_CGL` flag when compiling on macOS and no other window system has been explicitly requested.
-    *   **Subtask 2.3.4:** In `src/vrend/vrend_renderer.c`, update `vrend_renderer_init()` to recognize the new flag and pass it to `vrend_winsys_init()`.
+*   **Task 2.3: Update Renderer Initialization to Select CGL** ✅
+    *   **Subtask 2.3.1:** ✅ `VIRGL_RENDERER_USE_CGL` flag already exists in `src/virglrenderer.h`.
+    *   **Subtask 2.3.2:** ✅ Added `VREND_USE_CGL` flag to `src/vrend/vrend_renderer.h`.
+    *   **Subtask 2.3.3:** ✅ Added automatic CGL selection on macOS in `src/virglrenderer.c` when no other window system is specified.
+    *   **Subtask 2.3.4:** ✅ Added flag mapping from `VIRGL_RENDERER_USE_CGL` to `VREND_USE_CGL` in the renderer initialization code.
+
+**Phase 2 Status:** ✅ **COMPLETE** - All CGL backend integration with the vrend_winsys subsystem is fully implemented. The system now properly selects CGL automatically on macOS and handles explicit CGL flag requests. A comprehensive test suite (`test_phase2_cgl.c`) has been created to validate all integration functionality.
 
 ---
 
