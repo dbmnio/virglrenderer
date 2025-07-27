@@ -28,7 +28,8 @@
  * This file provides the platform-specific winsys implementation that allows
  * virglrenderer to create and manage OpenGL contexts using the native CGL
  * framework on macOS. It supports both main contexts and sub-contexts with
- * proper resource sharing, PBuffer management, and OpenGL version detection.
+ * proper resource sharing and OpenGL version detection. We use a modern
+ * approach without deprecated PBuffers - virglrenderer manages its own FBOs.
  */
 
 #define GL_SILENCE_DEPRECATION
@@ -38,7 +39,6 @@
 #include <string.h>
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/CGLTypes.h>
-#include <OpenGL/gl.h>
 
 #include "vrend_winsys_cgl.h"
 #include "vrend_renderer.h"
@@ -70,23 +70,6 @@ static CGLPixelFormatAttribute *cgl_create_pixel_format_attributes(void)
     };
     
     return attribs;
-}
-
-/**
- * Query OpenGL version from current context
- *
- * @param major_ver Pointer to store major version
- * @param minor_ver Pointer to store minor version
- */
-static void cgl_query_gl_version(int *major_ver, int *minor_ver)
-{
-    const char *version_str = (const char *)glGetString(GL_VERSION);
-    if (version_str) {
-        sscanf(version_str, "%d.%d", major_ver, minor_ver);
-    } else {
-        *major_ver = 3;
-        *minor_ver = 3;  /* Default fallback */
-    }
 }
 
 struct virgl_cgl *virgl_cgl_init(void)
@@ -158,7 +141,10 @@ virgl_renderer_gl_context virgl_cgl_create_context(struct virgl_cgl *cgl, struct
     memset(vrend_ctx, 0, sizeof(struct vrend_cgl_context));
     vrend_ctx->pixel_format = cgl->pix_fmt;
     vrend_ctx->owns_pixel_format = true;  /* Main contexts own their resources */
-    vrend_ctx->owns_pbuffer = true;
+    
+    /* Set default OpenGL version (will be detected properly by vrend system) */
+    vrend_ctx->gl_major_version = 3;
+    vrend_ctx->gl_minor_version = 3;
 
     /* Create the native CGL context */
     CGLError err = CGLCreateContext(cgl->pix_fmt, shared_ctx, &vrend_ctx->ctx);
@@ -167,42 +153,6 @@ virgl_renderer_gl_context virgl_cgl_create_context(struct virgl_cgl *cgl, struct
         free(vrend_ctx);
         return NULL;
     }
-
-    /* Create a small PBuffer for off-screen rendering */
-    err = CGLCreatePBuffer(1, 1, GL_TEXTURE_2D, GL_RGBA, 0, &vrend_ctx->pbuffer);
-    if (err != kCGLNoError) {
-        virgl_error("CGLCreatePBuffer failed: %s\n", CGLErrorString(err));
-        CGLDestroyContext(vrend_ctx->ctx);
-        free(vrend_ctx);
-        return NULL;
-    }
-
-    /* Attach the PBuffer to the context */
-    err = CGLSetPBuffer(vrend_ctx->ctx, vrend_ctx->pbuffer, 0, 0, 0);
-    if (err != kCGLNoError) {
-        virgl_error("CGLSetPBuffer failed: %s\n", CGLErrorString(err));
-        CGLDestroyPBuffer(vrend_ctx->pbuffer);
-        CGLDestroyContext(vrend_ctx->ctx);
-        free(vrend_ctx);
-        return NULL;
-    }
-
-    /* Make context current to query OpenGL version */
-    CGLContextObj prev_ctx = CGLGetCurrentContext();
-    err = CGLSetCurrentContext(vrend_ctx->ctx);
-    if (err != kCGLNoError) {
-        virgl_error("CGLSetCurrentContext failed during context creation: %s\n", CGLErrorString(err));
-        CGLDestroyPBuffer(vrend_ctx->pbuffer);
-        CGLDestroyContext(vrend_ctx->ctx);
-        free(vrend_ctx);
-        return NULL;
-    }
-
-    /* Query and store OpenGL version */
-    cgl_query_gl_version(&vrend_ctx->gl_major_version, &vrend_ctx->gl_minor_version);
-
-    /* Restore previous context */
-    CGLSetCurrentContext(prev_ctx);
 
     return (virgl_renderer_gl_context)vrend_ctx;
 }
@@ -216,15 +166,12 @@ void virgl_cgl_destroy_context(struct virgl_cgl *cgl, virgl_renderer_gl_context 
 
     struct vrend_cgl_context *vrend_ctx = (struct vrend_cgl_context *)ctx;
 
-    /* Destroy resources in the correct order, but only if this context owns them */
-    if (vrend_ctx->owns_pbuffer && vrend_ctx->pbuffer) {
-        CGLDestroyPBuffer(vrend_ctx->pbuffer);
-    }
-    
+    /* Destroy CGL context */
     if (vrend_ctx->ctx) {
         CGLDestroyContext(vrend_ctx->ctx);
     }
     
+    /* Only destroy pixel format if this context owns it */
     if (vrend_ctx->owns_pixel_format && vrend_ctx->pixel_format) {
         CGLDestroyPixelFormat(vrend_ctx->pixel_format);
     }
@@ -288,9 +235,7 @@ struct vrend_cgl_context *virgl_cgl_create_sub_context(struct virgl_cgl *cgl,
     
     /* Sub-contexts reference main context resources but don't own them */
     sub_ctx->pixel_format = main_ctx->pixel_format;
-    sub_ctx->pbuffer = main_ctx->pbuffer;
     sub_ctx->owns_pixel_format = false;
-    sub_ctx->owns_pbuffer = false;
     
     /* Copy OpenGL version from main context */
     sub_ctx->gl_major_version = main_ctx->gl_major_version;

@@ -35,12 +35,12 @@
  * for proper sub-context management and resource sharing.
  *
  * This structure contains the native CGL objects and metadata needed
- * for managing contexts in the vrend system.
+ * for managing contexts in the vrend system. Note that we no longer use
+ * deprecated PBuffers - virglrenderer creates its own FBOs for off-screen rendering.
  */
 struct vrend_cgl_context {
     CGLContextObj ctx;              /* Native CGL context */
     CGLPixelFormatObj pixel_format; /* Pixel format (owned by main context) */
-    CGLPBufferObj pbuffer;          /* PBuffer for off-screen rendering */
     
     /* OpenGL version information */
     int gl_major_version;
@@ -48,7 +48,6 @@ struct vrend_cgl_context {
     
     /* Context ownership flags */
     bool owns_pixel_format;         /* True for main contexts, false for sub-contexts */
-    bool owns_pbuffer;              /* True for main contexts, false for sub-contexts */
 };
 
 struct virgl_cgl;
