@@ -1,0 +1,16 @@
+# Add this to the main meson.build file to build the Phase 1 test
+# Or create a separate test executable
+
+if have_cgl
+  test_phase1_cgl = executable(
+    'test_phase1_cgl',
+    'test_phase1_cgl.c',
+    dependencies: [libvirglrenderer_dep, cgl_dep],
+    include_directories: ['.', 'src'],
+    c_args: ['-DHAVE_CGL_H=1'],
+    install: false
+  )
+  
+  # Optional: Add as a test case
+  # test('phase1_cgl_test', test_phase1_cgl)
+endif 

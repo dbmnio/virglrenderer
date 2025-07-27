@@ -114,6 +114,7 @@ struct virgl_renderer_callbacks {
  */
 #define VIRGL_RENDERER_THREAD_SYNC 2
 #define VIRGL_RENDERER_USE_GLX (1 << 2)
+#define VIRGL_RENDERER_USE_CGL (1 << 15)
 #define VIRGL_RENDERER_USE_SURFACELESS (1 << 3)
 #define VIRGL_RENDERER_USE_GLES (1 << 4)
 

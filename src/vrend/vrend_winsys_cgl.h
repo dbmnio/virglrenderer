@@ -38,4 +38,4 @@ int virgl_cgl_make_context_current(struct virgl_cgl *cgl, virgl_renderer_gl_cont
 
 void *virgl_cgl_get_proc_address(const char *procname);
 
-#endif 
+#endif

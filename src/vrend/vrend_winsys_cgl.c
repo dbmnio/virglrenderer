@@ -55,7 +55,7 @@ struct virgl_cgl *virgl_cgl_init(void)
 
     CGLPixelFormatAttribute attribs[] = {
         kCGLPFAOpenGLProfile,
-        (CGLPixelFormatAttribute)kCGLOGLPVersion_3_3_Core,
+        (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core,
         kCGLPFADoubleBuffer,
         kCGLPFAAccelerated,
         kCGLPFANoRecovery,
