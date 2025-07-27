@@ -13,24 +13,39 @@ if [[ "$(uname)" != "Darwin" ]]; then
     exit 1
 fi
 
-# Build the main project if builddir doesn't exist
-if [[ ! -d "builddir" ]]; then
-    echo "📦 Setting up main build directory..."
+# Try different possible build directory names
+if [[ -d "builddir" ]]; then
+    BUILD_DIR="builddir"
+elif [[ -d "build" ]]; then
+    BUILD_DIR="build"
+else
+    echo "📦 Setting up build directory..."
     meson setup builddir -Dtests=enabled
+    BUILD_DIR="builddir"
 fi
 
 # Compile the main project to ensure all dependencies are built
-echo "🔧 Building main project..."
-meson compile -C builddir
+echo "🔧 Building main project in ${BUILD_DIR}..."
+meson compile -C ${BUILD_DIR}
+
+# Find the correct library path
+if [[ -f "${BUILD_DIR}/src/libvirglrenderer.a" ]]; then
+    LIB_PATH="${BUILD_DIR}/src/libvirglrenderer.a"
+elif [[ -f "${BUILD_DIR}/src/libvirglrenderer.so" ]]; then
+    LIB_PATH="-L${BUILD_DIR}/src -lvirglrenderer"
+else
+    echo "❌ Error: Could not find virglrenderer library in ${BUILD_DIR}/src/"
+    exit 1
+fi
 
 # Build the Phase 2 test using the project's built libraries
 echo "🧪 Building Phase 2 test..."
 clang -std=c99 -Wall -Wextra \
-    -I. -Ibuilddir \
+    -I. -I${BUILD_DIR} -I${BUILD_DIR}/src \
     -framework OpenGL \
     -lepoxy \
     test_phase2_cgl.c \
-    builddir/src/libvirglrenderer.a \
+    ${LIB_PATH} \
     -o test_phase2_cgl
 
 echo "✅ Build complete! Run with: ./test_phase2_cgl" 

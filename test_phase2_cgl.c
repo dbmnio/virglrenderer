@@ -8,6 +8,8 @@
  * 3. Context creation and management through the integrated system
  */
 
+#define GL_SILENCE_DEPRECATION  // Silence OpenGL deprecation warnings on macOS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -181,13 +183,9 @@ static bool test_context_creation(void) {
     
     // Test creating a virgl context (this exercises the winsys integration)
     uint32_t ctx_id = 1;
-    uint32_t ctx_create_args[] = {
-        VIRGL_CONTEXT_CREATE_CAPSET_ID, VIRTGPU_DRM_CAPSET_VIRGL,
-        0, 0  // padding
-    };
+    const char *ctx_name = "test_ctx";
     
-    ret = virgl_renderer_context_create(ctx_id, sizeof(ctx_create_args), 
-                                       (const char*)ctx_create_args);
+    ret = virgl_renderer_context_create(ctx_id, strlen(ctx_name), ctx_name);
     if (ret != 0) {
         printf("❌ FAILED: virgl_renderer_context_create returned %d\n", ret);
         virgl_renderer_cleanup(NULL);
