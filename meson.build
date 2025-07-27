@@ -310,9 +310,21 @@ if with_glx
 endif
 
 if with_cgl
-   cgl_dep = dependency('appleframeworks', modules: 'OpenGL')
-   have_cgl = cgl_dep.found()
-   conf_data.set('HAVE_CGL_H', have_cgl ? 1 : 0)
+   # CGL is only available on macOS
+   if with_host_darwin
+      cgl_dep = dependency('appleframeworks', modules: 'OpenGL')
+      have_cgl = cgl_dep.found()
+      conf_data.set('HAVE_CGL_H', have_cgl ? 1 : 0)
+   else
+      if require_cgl
+         error('CGL was explicitly requested but is only available on macOS')
+      endif
+      cgl_dep = not_found  # Set to not_found dependency to avoid undefined variable
+      have_cgl = false
+      conf_data.set('HAVE_CGL_H', 0)
+   endif
+else
+   cgl_dep = not_found  # Set to not_found dependency to avoid undefined variable
 endif
 
 have_vla = not cc.has_header_symbol('stdlib.h', '__STDC_NO_VLA__')

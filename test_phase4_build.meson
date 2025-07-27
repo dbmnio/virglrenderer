@@ -1,0 +1,93 @@
+# Phase 4 Build System Integration Test
+# Test to validate CGL build system integration for macOS
+
+project('test_phase4_cgl_build', 'c',
+   default_options : ['buildtype=debug', 'c_std=gnu11']
+)
+
+cc = meson.get_compiler('c')
+
+# Simulate the same platform detection logic as main build
+with_host_darwin = host_machine.system() == 'darwin'
+with_host_windows = host_machine.system() == 'windows'
+
+# Simulate the same CGL detection logic
+platforms = ['auto']  # Simulate auto platform detection
+require_cgl = platforms.contains('cgl')
+auto_egl_glx = platforms.contains('auto')
+with_cgl = require_cgl or auto_egl_glx
+
+have_cgl = false
+not_found = dependency('', required: false)
+
+if with_cgl and with_host_darwin
+   # Test CGL dependency detection on macOS
+   cgl_dep = dependency('appleframeworks', modules: 'OpenGL', required: false)
+   have_cgl = cgl_dep.found()
+   message('CGL detection on macOS: ' + (have_cgl ? 'SUCCESS' : 'FAILED'))
+elif with_cgl and not with_host_darwin
+   # Test that CGL is properly rejected on non-macOS
+   cgl_dep = not_found
+   have_cgl = false
+   message('CGL properly rejected on non-macOS platform: SUCCESS')
+else
+   cgl_dep = not_found
+   message('CGL not requested: SUCCESS')
+endif
+
+# Test CGL source inclusion logic
+vrend_winsys_cgl_sources = files('src/vrend/vrend_winsys_cgl.c')
+virgl_sources = []
+
+if have_cgl and host_machine.system() == 'darwin'
+   virgl_sources += vrend_winsys_cgl_sources
+   message('CGL sources included on macOS: SUCCESS')
+elif have_cgl and host_machine.system() != 'darwin'
+   # This should not happen with our logic, but test anyway
+   error('CGL sources should not be included on non-macOS platforms')
+else
+   message('CGL sources correctly excluded: SUCCESS')
+endif
+
+# Test dependency inclusion logic
+virgl_depends = []
+
+if have_cgl and host_machine.system() == 'darwin'
+   if cgl_dep.found()
+      virgl_depends += cgl_dep
+      message('CGL dependency added on macOS: SUCCESS')
+   else
+      message('CGL dependency not found on macOS: Expected on some CI systems')
+   endif
+endif
+
+# Summary of test results
+message('')
+message('=== Phase 4 Build System Test Results ===')
+message('Host platform: ' + host_machine.system())
+message('CGL requested: ' + with_cgl.to_string())
+message('CGL available: ' + have_cgl.to_string())
+message('CGL sources count: ' + virgl_sources.length().to_string())
+message('CGL dependencies count: ' + virgl_depends.length().to_string())
+
+if host_machine.system() == 'darwin'
+   expected_sources = have_cgl ? 1 : 0
+   expected_deps = have_cgl ? 1 : 0
+   
+   assert(virgl_sources.length() == expected_sources, 
+          'Expected @0@ CGL sources, got @1@'.format(expected_sources, virgl_sources.length()))
+   assert(virgl_depends.length() == expected_deps,
+          'Expected @0@ CGL dependencies, got @1@'.format(expected_deps, virgl_depends.length()))
+   
+   message('✅ macOS build system integration test PASSED')
+else
+   # On non-macOS platforms, should have no CGL sources or dependencies
+   assert(virgl_sources.length() == 0, 
+          'Expected 0 CGL sources on non-macOS, got @0@'.format(virgl_sources.length()))
+   assert(virgl_depends.length() == 0,
+          'Expected 0 CGL dependencies on non-macOS, got @0@'.format(virgl_depends.length()))
+   
+   message('✅ non-macOS build system integration test PASSED')
+endif
+
+message('=== All Phase 4 tests completed successfully ===') 

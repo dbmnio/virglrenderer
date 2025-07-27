@@ -143,7 +143,7 @@ virgl_depends = [
    m_dep,
 ]
 
-if with_cgl
+if with_cgl and host_machine.system() == 'darwin'
   virgl_depends += dependency('appleframeworks', modules: 'OpenGL')
 endif
 
@@ -170,7 +170,8 @@ if have_egl
    virgl_sources += vrend_winsys_egl_sources
 endif
 
-if have_cgl
+# CGL sources are only included on macOS hosts
+if have_cgl and host_machine.system() == 'darwin'
    virgl_sources += vrend_winsys_cgl_sources
 endif
 
