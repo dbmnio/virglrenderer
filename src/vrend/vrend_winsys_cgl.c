@@ -140,7 +140,7 @@ virgl_renderer_gl_context virgl_cgl_create_context(struct virgl_cgl *cgl, struct
     /* Initialize the context structure */
     memset(vrend_ctx, 0, sizeof(struct vrend_cgl_context));
     vrend_ctx->pixel_format = cgl->pix_fmt;
-    vrend_ctx->owns_pixel_format = true;  /* Main contexts own their resources */
+    vrend_ctx->owns_pixel_format = false;  /* Contexts don't own the shared pixel format */
     
     /* Set default OpenGL version (will be detected properly by vrend system) */
     vrend_ctx->gl_major_version = 3;
