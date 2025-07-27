@@ -29,6 +29,10 @@
 #include "vrend_winsys_glx.h"
 #endif
 
+#ifdef HAVE_CGL_H
+#include "vrend_winsys_cgl.h"
+#endif
+
 #include <stddef.h>
 
 enum {
@@ -135,6 +139,13 @@ void vrend_winsys_cleanup(void)
       use_context = CONTEXT_NONE;
    }
 #endif
+#ifdef HAVE_CGL_H
+   if (use_context == CONTEXT_CGL) {
+      virgl_cgl_destroy(cgl_info);
+      cgl_info = NULL;
+      use_context = CONTEXT_NONE;
+   }
+#endif
 }
 
 int vrend_winsys_init_external(void *egl_display)
@@ -165,6 +176,10 @@ virgl_renderer_gl_context vrend_winsys_create_context(UNUSED struct virgl_gl_ctx
    if (use_context == CONTEXT_GLX)
       return virgl_glx_create_context(glx_info, param);
 #endif
+#ifdef HAVE_CGL_H
+   if (use_context == CONTEXT_CGL)
+      return virgl_cgl_create_context(cgl_info, param);
+#endif
    return NULL;
 }
 
@@ -180,6 +195,12 @@ void vrend_winsys_destroy_context(UNUSED virgl_renderer_gl_context ctx)
 #ifdef HAVE_EPOXY_GLX_H
    if (use_context == CONTEXT_GLX) {
       virgl_glx_destroy_context(glx_info, ctx);
+      return;
+   }
+#endif
+#ifdef HAVE_CGL_H
+   if (use_context == CONTEXT_CGL) {
+      virgl_cgl_destroy_context(cgl_info, ctx);
       return;
    }
 #endif
@@ -204,6 +225,13 @@ int vrend_winsys_make_context_current(UNUSED virgl_renderer_gl_context ctx)
          virgl_error("%s: Error switching context\n", __func__);
    }
 #endif
+#ifdef HAVE_CGL_H
+   if (use_context == CONTEXT_CGL) {
+      ret = virgl_cgl_make_context_current(cgl_info, ctx);
+      if (ret)
+         virgl_error("%s: Error switching CGL context\n", __func__);
+   }
+#endif
    assert(!ret && "Failed to switch GL context");
    return ret;
 }
@@ -217,6 +245,7 @@ int vrend_winsys_has_gl_colorspace(void)
 #endif
    return use_context == CONTEXT_NONE ||
          use_context == CONTEXT_GLX ||
+         use_context == CONTEXT_CGL ||
          (use_context == CONTEXT_EGL && egl_colorspace) ||
          (use_context == CONTEXT_EGL_EXTERNAL && egl_colorspace);
 }
@@ -275,10 +304,10 @@ int vrend_winsys_get_fd_for_texture2(uint32_t tex_id, int *fd, int *stride, int 
 uint32_t vrend_winsys_query_video_memory(void)
 {
 #ifdef HAVE_EPOXY_GLX_H
-   return virgl_glx_query_video_memory(glx_info);
-#else
-   return 0;
+   if (use_context == CONTEXT_GLX)
+      return virgl_glx_query_video_memory(glx_info);
 #endif
+   return 0;
 }
 
 /* different_gpu means that GBM and GL renderer are on two different DRM devices.

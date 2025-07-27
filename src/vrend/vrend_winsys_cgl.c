@@ -32,48 +32,27 @@
  */
 
 #include <dlfcn.h>
+#include <stdlib.h>
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/CGLTypes.h>
 
-#include "vrend_winsys.h"
+#include "vrend_winsys_cgl.h"
 #include "vrend_debug.h"
 
-struct vrend_winsys_cgl {
+struct virgl_cgl {
     CGLPixelFormatObj pix_fmt;
     CGLContextObj ctx;
 };
 
-static struct vrend_winsys_cgl cgl_info;
-
-static int vrend_winsys_cgl_init(void);
-static void vrend_winsys_cgl_destroy(void);
-static vrend_gl_proc_t vrend_winsys_cgl_get_proc_address(const char *procname);
-
-const struct vrend_winsys_vtable vrend_winsys_cgl_vtable = {
-    .init = vrend_winsys_cgl_init,
-    .destroy = vrend_winsys_cgl_destroy,
-    .get_proc_address = vrend_winsys_cgl_get_proc_address,
-};
-
-static vrend_gl_proc_t vrend_winsys_cgl_get_proc_address(const char *procname)
+struct virgl_cgl *virgl_cgl_init(void)
 {
-    return dlsym(RTLD_DEFAULT, procname);
-}
+    struct virgl_cgl *cgl = malloc(sizeof(struct virgl_cgl));
+    if (!cgl)
+        return NULL;
 
-static void vrend_winsys_cgl_destroy(void)
-{
-    if (cgl_info.ctx) {
-        CGLDestroyContext(cgl_info.ctx);
-        cgl_info.ctx = NULL;
-    }
-    if (cgl_info.pix_fmt) {
-        CGLDestroyPixelFormat(cgl_info.pix_fmt);
-        cgl_info.pix_fmt = NULL;
-    }
-}
+    cgl->pix_fmt = NULL;
+    cgl->ctx = NULL;
 
-static int cgl_init(void)
-{
     CGLPixelFormatAttribute attribs[] = {
         kCGLPFAOpenGLProfile,
         (CGLPixelFormatAttribute)kCGLOGLPVersion_3_3_Core,
@@ -88,33 +67,88 @@ static int cgl_init(void)
     };
 
     GLint num_pixel_formats = 0;
-    CGLError err = CGLChoosePixelFormat(attribs, &cgl_info.pix_fmt, &num_pixel_formats);
+    CGLError err = CGLChoosePixelFormat(attribs, &cgl->pix_fmt, &num_pixel_formats);
     if (err != kCGLNoError) {
-        vrend_printf( "CGLChoosePixelFormat failed: %s\n", CGLErrorString(err));
-        return -1;
+        vrend_printf("CGLChoosePixelFormat failed: %s\n", CGLErrorString(err));
+        free(cgl);
+        return NULL;
     }
 
-    err = CGLCreateContext(cgl_info.pix_fmt, NULL, &cgl_info.ctx);
+    err = CGLCreateContext(cgl->pix_fmt, NULL, &cgl->ctx);
     if (err != kCGLNoError) {
         vrend_printf("CGLCreateContext failed: %s\n", CGLErrorString(err));
-        vrend_winsys_cgl_destroy();
-        return -1;
+        CGLDestroyPixelFormat(cgl->pix_fmt);
+        free(cgl);
+        return NULL;
     }
 
-    err = CGLSetCurrentContext(cgl_info.ctx);
+    err = CGLSetCurrentContext(cgl->ctx);
     if (err != kCGLNoError) {
         vrend_printf("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
-        vrend_winsys_cgl_destroy();
-        return -1;
+        CGLDestroyContext(cgl->ctx);
+        CGLDestroyPixelFormat(cgl->pix_fmt);
+        free(cgl);
+        return NULL;
     }
 
+    return cgl;
+}
+
+void virgl_cgl_destroy(struct virgl_cgl *cgl)
+{
+    if (!cgl)
+        return;
+
+    if (cgl->ctx) {
+        CGLDestroyContext(cgl->ctx);
+    }
+    if (cgl->pix_fmt) {
+        CGLDestroyPixelFormat(cgl->pix_fmt);
+    }
+    free(cgl);
+}
+
+virgl_renderer_gl_context virgl_cgl_create_context(struct virgl_cgl *cgl, struct virgl_gl_ctx_param *vparams)
+{
+    if (!cgl || !vparams)
+        return NULL;
+
+    CGLContextObj shared_ctx = vparams->shared ? CGLGetCurrentContext() : NULL;
+    CGLContextObj new_ctx;
+
+    CGLError err = CGLCreateContext(cgl->pix_fmt, shared_ctx, &new_ctx);
+    if (err != kCGLNoError) {
+        vrend_printf("CGLCreateContext failed: %s\n", CGLErrorString(err));
+        return NULL;
+    }
+
+    return (virgl_renderer_gl_context)new_ctx;
+}
+
+void virgl_cgl_destroy_context(struct virgl_cgl *cgl, virgl_renderer_gl_context ctx)
+{
+    (void)cgl; // unused parameter
+    if (ctx) {
+        CGLContextObj cgl_ctx = (CGLContextObj)ctx;
+        CGLDestroyContext(cgl_ctx);
+    }
+}
+
+int virgl_cgl_make_context_current(struct virgl_cgl *cgl, virgl_renderer_gl_context ctx)
+{
+    (void)cgl; // unused parameter
+    CGLContextObj cgl_ctx = (CGLContextObj)ctx;
+    
+    CGLError err = CGLSetCurrentContext(cgl_ctx);
+    if (err != kCGLNoError) {
+        vrend_printf("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
+        return -1;
+    }
+    
     return 0;
 }
 
-static int vrend_winsys_cgl_init(void)
+void *virgl_cgl_get_proc_address(const char *procname)
 {
-    if (cgl_init() != 0) {
-        return -1;
-    }
-    return 0;
+    return dlsym(RTLD_DEFAULT, procname);
 } 
