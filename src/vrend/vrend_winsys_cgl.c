@@ -31,13 +31,16 @@
  * creating surfaces, and handling context management.
  */
 
+#define GL_SILENCE_DEPRECATION
+
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/CGLTypes.h>
 
 #include "vrend_winsys_cgl.h"
-#include "vrend_debug.h"
+#include "vrend_renderer.h"
+#include "virgl_util.h"
 
 struct virgl_cgl {
     CGLPixelFormatObj pix_fmt;
@@ -69,14 +72,14 @@ struct virgl_cgl *virgl_cgl_init(void)
     GLint num_pixel_formats = 0;
     CGLError err = CGLChoosePixelFormat(attribs, &cgl->pix_fmt, &num_pixel_formats);
     if (err != kCGLNoError) {
-        vrend_printf("CGLChoosePixelFormat failed: %s\n", CGLErrorString(err));
+        virgl_error("CGLChoosePixelFormat failed: %s\n", CGLErrorString(err));
         free(cgl);
         return NULL;
     }
 
     err = CGLCreateContext(cgl->pix_fmt, NULL, &cgl->ctx);
     if (err != kCGLNoError) {
-        vrend_printf("CGLCreateContext failed: %s\n", CGLErrorString(err));
+        virgl_error("CGLCreateContext failed: %s\n", CGLErrorString(err));
         CGLDestroyPixelFormat(cgl->pix_fmt);
         free(cgl);
         return NULL;
@@ -84,7 +87,7 @@ struct virgl_cgl *virgl_cgl_init(void)
 
     err = CGLSetCurrentContext(cgl->ctx);
     if (err != kCGLNoError) {
-        vrend_printf("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
+        virgl_error("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
         CGLDestroyContext(cgl->ctx);
         CGLDestroyPixelFormat(cgl->pix_fmt);
         free(cgl);
@@ -118,7 +121,7 @@ virgl_renderer_gl_context virgl_cgl_create_context(struct virgl_cgl *cgl, struct
 
     CGLError err = CGLCreateContext(cgl->pix_fmt, shared_ctx, &new_ctx);
     if (err != kCGLNoError) {
-        vrend_printf("CGLCreateContext failed: %s\n", CGLErrorString(err));
+        virgl_error("CGLCreateContext failed: %s\n", CGLErrorString(err));
         return NULL;
     }
 
@@ -141,7 +144,7 @@ int virgl_cgl_make_context_current(struct virgl_cgl *cgl, virgl_renderer_gl_cont
     
     CGLError err = CGLSetCurrentContext(cgl_ctx);
     if (err != kCGLNoError) {
-        vrend_printf("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
+        virgl_error("CGLSetCurrentContext failed: %s\n", CGLErrorString(err));
         return -1;
     }
     
